@@ -1,0 +1,14 @@
+/._d
+/._bcdi
+/._ncdi
+*.o
+*.cmi
+*.cmo
+*.cma
+*.cmx
+*.cmxa
+*.cmxs
+/qkasm
+/parser.ml
+/parser.mli
+/lexer.ml
