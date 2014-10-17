@@ -107,6 +107,12 @@ let translate_instruction opname args =
           InstR (funct, rs, rt, rd, 0)
       | _ -> raise (Failure "Illegal Operand List")
       end
+  | OpTypeR1 funct ->
+      begin match args with
+      | [ ORegister rs ] ->
+          InstR (funct, rs, 0, 0, 0)
+      | _ -> raise (Failure "Illegal Operand List")
+      end
   | OpTypeRS funct ->
       begin match args with
       | [ ORegister rd; ORegister rt; OImmediate shamt ] ->
@@ -149,17 +155,17 @@ let emit_instruction labels pos inst =
   begin match inst with
   | InstR (funct, rs, rt, rd, shamt) ->
       [|
-        rs lsr 3;
+        (rs lsr 3) land 255;
         ((rs lsl 5) lor rt) land 255;
-        (rd lsl 3) lor (shamt lsr 2);
+        ((rd lsl 3) lor (shamt lsr 2)) land 255;
         ((shamt lsl 6) lor funct) land 255;
       |]
   | InstI (opcode, rs, rt, imm) ->
       let imm_int = Big_int.int_of_big_int imm in
       [|
-        (opcode lsl 2) lor (rs lsr 3);
+        ((opcode lsl 2) lor (rs lsr 3)) land 255;
         ((rs lsl 5) lor rt) land 255;
-        imm_int lsr 8;
+        (imm_int lsr 8) land 255;
         imm_int land 255;
       |]
   | InstIJ (opcode, rs, rt, l) ->
@@ -170,7 +176,7 @@ let emit_instruction labels pos inst =
       in
       let posdiff = jpos - (pos + 1) in
       [|
-        (opcode lsl 2) lor (rs lsr 3);
+        ((opcode lsl 2) lor (rs lsr 3)) land 255;
         ((rs lsl 5) lor rt) land 255;
         (posdiff lsr 8) land 255;
         posdiff land 255;
@@ -183,7 +189,7 @@ let emit_instruction labels pos inst =
       in
       (* let posdiff = jpos - (pos + 1) in *)
       [|
-        (opcode lsl 2) lor (jpos lsr 24);
+        ((opcode lsl 2) lor (jpos lsr 24)) land 255;
         (jpos lsr 16) land 255;
         (jpos lsr 8) land 255;
         jpos land 255;
