@@ -1,5 +1,5 @@
 SOURCES = \
-	statement.ml parser.mly lexer.mll main.ml
+	statement.mli statement.ml parser.mly lexer.mll main.ml
 RESULT = qkasm
 
 OCAMLYACC = menhir
