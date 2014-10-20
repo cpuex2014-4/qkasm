@@ -3,10 +3,12 @@ open Big_int
 exception Assembly_error of string
 
 type gpr = int
+type fpr = int
 
 type operand =
   | OLabelRef of string
   | ORegister of gpr
+  | OFRegister of fpr
   | OImmediate of big_int
   | ODisplacement of big_int * gpr
 

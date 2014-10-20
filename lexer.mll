@@ -45,7 +45,7 @@
 let digit = ['0'-'9']
 let space = ' ' | '\t' | '\r'
 let alpha = ['a'-'z' 'A'-'Z' '_']
-let alnum = alpha | digit
+let alnum = alpha | digit | '.'
 let intstr = digit+ | ['+' '-'] digit+
 let ident = alpha alnum*
 let regident = '$' ident
@@ -60,6 +60,7 @@ rule token = parse
   | '('            { LPAREN }
   | ')'            { RPAREN }
   | ident as ident { IDENT ident }
+  | "$f" (digit+ as n) { FREGNAME (int_of_string n) }
   | regident as regident { REGNAME (Hashtbl.find regtable regident) }
   | '$' (digit+ as n) { REGNAME (int_of_string n) }
   | intstr as n    { NUMBER (Big_int.big_int_of_string n) }

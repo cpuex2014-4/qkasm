@@ -10,6 +10,7 @@ let check_unsigned_size l x =
   lt_big_int x (shift_left_big_int unit_big_int l)
 
 type gpr = int
+type fpr = int
 
 let reg_zero = (0 : gpr)
 let reg_at = (1 : gpr)
@@ -17,11 +18,12 @@ let reg_at = (1 : gpr)
 type operand =
   | OLabelRef of string
   | ORegister of gpr
+  | OFRegister of fpr
   | OImmediate of big_int
   | ODisplacement of big_int * gpr
 
 type optype =
-  | OptypeR | OptypeI | OptypeIB | OptypeJ
+  | OptypeR | OptypeI | OptypeIB | OptypeJ | OptypeF
   | OptypeCustom of
       ((string, int) Hashtbl.t -> instruction -> int -> int) *
       ((string, int) Hashtbl.t -> instruction -> int -> int array list)
@@ -29,6 +31,7 @@ type optype =
 and instruction = {
   mutable optype : optype;
   mutable opcode : int;
+  mutable fmt : int;
   mutable funct : int;
   mutable rs : gpr;
   mutable rt : gpr;
@@ -44,10 +47,11 @@ and instruction = {
 type operand_place =
   | SetOptype of optype
   | SetOpcode of int
+  | SetFmt of int
   | SetFunct of int
-  | RS
-  | RT
-  | RD
+  | SetRS of int | SetRT of int
+  | RS | RT | RD
+  | FS | FT | FD
   | Shamt
   | Label
   | Displacement
@@ -57,6 +61,7 @@ type operand_place =
 let instruction_init () = {
   optype = OptypeI;
   opcode = 0;
+  fmt = 0;
   funct = 0;
   rs = 0;
   rt = 0;
@@ -78,14 +83,26 @@ let process_operands places args =
         inst.optype <- optype; process_operands places args
     | (SetOpcode opcode :: places), _ ->
         inst.opcode <- opcode; process_operands places args
+    | (SetFmt fmt :: places), _ ->
+        inst.fmt <- fmt; process_operands places args
     | (SetFunct funct :: places), _ ->
         inst.funct <- funct; process_operands places args
+    | (SetRS rs :: places), _ ->
+        inst.rs <- rs; process_operands places args
+    | (SetRT rt :: places), _ ->
+        inst.rt <- rt; process_operands places args
     | (RS :: places), (ORegister rs :: args) ->
         inst.rs <- rs; process_operands places args
     | (RT :: places), (ORegister rt :: args) ->
         inst.rt <- rt; process_operands places args
     | (RD :: places), (ORegister rd :: args) ->
         inst.rd <- rd; process_operands places args
+    | (FS :: places), (OFRegister fs :: args) ->
+        inst.rs <- fs; process_operands places args
+    | (FT :: places), (OFRegister ft :: args) ->
+        inst.rt <- ft; process_operands places args
+    | (FD :: places), (OFRegister fd :: args) ->
+        inst.rd <- fd; process_operands places args
     | (Shamt :: places), (OImmediate shamt :: args) ->
         assert (check_unsigned_size 5 shamt);
         inst.shamt <- int_of_big_int shamt; process_operands places args
@@ -125,13 +142,16 @@ let translate_instruction opname args =
   in
   process_operands opinfo args
 
-let emit_rtype rs rt rd shamt funct =
+let emit_655556 a b c d e f =
   [|
-    (rs lsr 3) land 255;
-    ((rs lsl 5) lor rt) land 255;
-    ((rd lsl 3) lor (shamt lsr 2)) land 255;
-    ((shamt lsl 6) lor funct) land 255;
+    ((a lsl 2) lor (b lsr 3)) land 255;
+    ((b lsl 5) lor c) land 255;
+    ((d lsl 3) lor (e lsr 2)) land 255;
+    ((e lsl 6) lor f) land 255;
   |]
+
+let emit_rtype rs rt rd shamt funct =
+  emit_655556 0 rs rt rd shamt funct
 
 let emit_jtype opcode jpos =
   [|
@@ -173,6 +193,7 @@ let calculate_instruction_length_internal labels pos inst =
         4
       else
         3
+  | OptypeF -> 1
   | OptypeCustom (f, _) -> f labels inst pos
   end
 
@@ -220,6 +241,8 @@ let emit_instruction labels pos inst =
       else
         let imm_int = int_of_big_int inst.imm in
         [emit_itype inst.opcode inst.rs inst.rt imm_int]
+  | OptypeF ->
+      [emit_655556 0b010001 inst.fmt inst.rt inst.rs inst.rd inst.funct]
   | OptypeCustom (_, g) -> g labels inst pos
   end
 
@@ -285,6 +308,23 @@ let _ =
     "swl"    , [SetOpcode 0b101010; RT; Displacement];
     "sw"     , [SetOpcode 0b101011; RT; Displacement];
     "swr"    , [SetOpcode 0b101110; RT; Displacement];
+
+    "bc1f"   , [SetOptype OptypeIB; SetOpcode 0b010001;
+                SetRS 0b01000; SetRT 0b00000; Label;];
+    "bc1t"   , [SetOptype OptypeIB; SetOpcode 0b010001;
+                SetRS 0b01000; SetRT 0b00000; Label;];
+    "mfc1"   , [SetOptype OptypeF; SetFmt  0; SetFunct 0b000000; RT; FS];
+    "mtc1"   , [SetOptype OptypeF; SetFmt  4; SetFunct 0b000000; RT; FS];
+    "add.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000000; FD; FT; FS];
+    "sub.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000001; FD; FT; FS];
+    "mul.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000010; FD; FT; FS];
+    "div.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000011; FD; FT; FS];
+    "mov.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000110; FD; FS];
+    "cvt.s.w", [SetOptype OptypeF; SetFmt 20; SetFunct 0b100000; FD; FS];
+    "cvt.w.s", [SetOptype OptypeF; SetFmt 16; SetFunct 0b100100; FD; FS];
+    "c.eq.s" , [SetOptype OptypeF; SetFmt 16; SetFunct 0b110010; FS; FT];
+    "c.olt.s", [SetOptype OptypeF; SetFmt 16; SetFunct 0b110100; FS; FT];
+    "c.ole.s", [SetOptype OptypeF; SetFmt 16; SetFunct 0b110110; FS; FT];
   ]
 
 let _ =

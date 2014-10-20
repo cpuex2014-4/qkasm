@@ -3,6 +3,7 @@
 %}
 %token<string> IDENT
 %token<int> REGNAME
+%token<int> FREGNAME
 %token COLON
 %token COMMA
 %token LPAREN RPAREN
@@ -30,6 +31,7 @@ statement:
 operand:
   | ident = IDENT { OLabelRef ident }
   | ident = REGNAME { ORegister ident }
+  | ident = FREGNAME { OFRegister ident }
   | num = NUMBER { OImmediate num }
   | num = NUMBER;
     LPAREN;
