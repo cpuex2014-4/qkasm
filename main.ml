@@ -16,10 +16,11 @@ let _ =
     List.iter (fun stmt ->
       begin match stmt with
       | SLabel lbl ->
-          Hashtbl.add labels lbl (!pos);
+          (* Format.eprintf "%s : %x\n" lbl !pos; *)
+          Hashtbl.add labels lbl (!pos)
       | SInstruction inst ->
           need_update :=
-            calculate_instruction_length labels !pos inst ||
+            calculate_instruction_length old_labels !pos inst ||
             !need_update;
           pos := !pos + instruction_length inst
       end
@@ -30,7 +31,9 @@ let _ =
   let pos = ref 0 in
   List.iter (fun stmt ->
     begin match stmt with
-    | SLabel _ -> ()
+    | SLabel lbl ->
+        (* Format.eprintf "%s : %x\n" lbl !pos; *)
+        assert (Hashtbl.find labels lbl = !pos);
     | SInstruction inst ->
         let a = emit_instruction labels !pos inst in
         assert (List.length a = instruction_length inst);
@@ -38,9 +41,9 @@ let _ =
           (* Printf.printf "%x %x %x %x\n" aa.(0) aa.(1) aa.(2) aa.(3); *)
           for i = 0 to 3 do
             output_char stdout (char_of_int aa.(i))
-          done;
-          pos := !pos + instruction_length inst
-        ) a
+          done
+        ) a;
+        pos := !pos + instruction_length inst
     end
   ) stmts
 

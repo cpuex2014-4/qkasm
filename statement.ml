@@ -312,13 +312,13 @@ let _ =
     "bc1f"   , [SetOptype OptypeIB; SetOpcode 0b010001;
                 SetRS 0b01000; SetRT 0b00000; Label;];
     "bc1t"   , [SetOptype OptypeIB; SetOpcode 0b010001;
-                SetRS 0b01000; SetRT 0b00000; Label;];
+                SetRS 0b01000; SetRT 0b00001; Label;];
     "mfc1"   , [SetOptype OptypeF; SetFmt  0; SetFunct 0b000000; RT; FS];
     "mtc1"   , [SetOptype OptypeF; SetFmt  4; SetFunct 0b000000; RT; FS];
-    "add.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000000; FD; FT; FS];
-    "sub.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000001; FD; FT; FS];
-    "mul.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000010; FD; FT; FS];
-    "div.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000011; FD; FT; FS];
+    "add.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000000; FD; FS; FT];
+    "sub.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000001; FD; FS; FT];
+    "mul.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000010; FD; FS; FT];
+    "div.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000011; FD; FS; FT];
     "mov.s"  , [SetOptype OptypeF; SetFmt 16; SetFunct 0b000110; FD; FS];
     "cvt.s.w", [SetOptype OptypeF; SetFmt 20; SetFunct 0b100000; FD; FS];
     "cvt.w.s", [SetOptype OptypeF; SetFmt 16; SetFunct 0b100100; FD; FS];
@@ -330,14 +330,14 @@ let _ =
 let _ =
   Hashtbl.add optable "li" [
     SetOptype (OptypeCustom ((fun labels inst pos ->
-      if check_signed_size 32 inst.imm ||
-         check_unsigned_size 32 inst.imm then
+      if check_signed_size 16 inst.imm ||
+         check_unsigned_size 16 inst.imm then
         1
       else 2
     ), (fun labels inst pos ->
-      if check_signed_size 32 inst.imm then
+      if check_signed_size 16 inst.imm then
         [emit_itype 0b001001 reg_zero inst.rt (int_of_big_int inst.imm)]
-      else if check_unsigned_size 32 inst.imm then
+      else if check_unsigned_size 16 inst.imm then
         [emit_itype 0b001101 reg_zero inst.rt (int_of_big_int inst.imm)]
       else
         let imm_int_u = int_of_big_int (shift_right_big_int inst.imm 16) in

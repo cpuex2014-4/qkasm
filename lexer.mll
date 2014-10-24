@@ -1,5 +1,21 @@
 {
+  open Big_int
   open Parser
+
+  let big_int_of_hex_string s =
+    let x = ref zero_big_int in
+    String.iter (fun ch ->
+      let digit =
+        if '0' <= ch && ch <= '9' then int_of_char ch - int_of_char '0'
+        else if 'A' <= ch && ch <= 'F'
+          then int_of_char ch - int_of_char 'A' + 10
+        else if 'a' <= ch && ch <= 'f'
+          then int_of_char ch - int_of_char 'a' + 10
+        else assert false
+      in
+      x := add_int_big_int digit (mult_int_big_int 16 !x)
+    ) s;
+    !x
 
   let regtable =
     let tbl = Hashtbl.create 357 in
@@ -43,6 +59,7 @@
 }
 
 let digit = ['0'-'9']
+let hexdigit = ['0'-'9' 'a'-'z' 'A'-'Z']
 let space = ' ' | '\t' | '\r'
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alnum = alpha | digit | '.'
@@ -63,7 +80,8 @@ rule token = parse
   | "$f" (digit+ as n) { FREGNAME (int_of_string n) }
   | regident as regident { REGNAME (Hashtbl.find regtable regident) }
   | '$' (digit+ as n) { REGNAME (int_of_string n) }
-  | intstr as n    { NUMBER (Big_int.big_int_of_string n) }
+  | intstr as n    { NUMBER (big_int_of_string n) }
+  | "0x" (hexdigit+ as n) { NUMBER (big_int_of_hex_string n) }
   | eof            { EOF }
   | _              { assert false }
 

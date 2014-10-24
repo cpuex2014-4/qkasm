@@ -12,7 +12,9 @@ start:
 fib:
 	#addiu	$t0, $zero, 0
 	mtc1	$zero, $f0
-	addiu	$t1, $zero, 1
+	#addiu	$t0, $zero, 1
+	addiu	$t1, $zero, 16256
+	sll	$t1, $t1, 16
 	mtc1	$t1, $f1
 	#addiu	$t2, $zero, 0
 	mtc1	$zero, $f2
