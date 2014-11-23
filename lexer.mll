@@ -70,7 +70,9 @@ let regident = '$' ident
 rule token = parse
   | space+         { token lexbuf }
   | '\n'           { Lexing.new_line lexbuf; EOL }
+  | "\\\n"         { Lexing.new_line lexbuf; token lexbuf }
   | '#'            { skip_line lexbuf; EOL }
+  | ';'            { skip_line lexbuf; EOL }
   | "//"           { skip_line lexbuf; EOL }
   | ','            { COMMA }
   | ':'            { COLON }

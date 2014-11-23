@@ -104,6 +104,10 @@ let disasm () =
         ("xori", [gprnames.(rt); gprnames.(rs); hex4_string_of_int uimm]);
       ) else if opcode = 0b001111 && rs = 0 then (
         ("lui", [gprnames.(rt); hex4_string_of_int uimm]);
+      ) else if opcode = 0b011100 && rs = 0 && imm = 0 then (
+        ("rrb", [gprnames.(rt)]);
+      ) else if opcode = 0b011101 && rs = 0 && imm = 0 then (
+        ("rsb", [gprnames.(rt)]);
       ) else if opcode = 0b100011 then (
         ("lw", [gprnames.(rt); string_of_disp gprnames.(rs) imm]);
       ) else if opcode = 0b101011 then (

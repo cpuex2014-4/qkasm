@@ -1,4 +1,5 @@
 %{
+  open Loc
   open Statement
 %}
 %token<string> IDENT
@@ -23,17 +24,27 @@ statement_opt:
   | s = statement; EOL { Some s }
 
 statement:
-  | ident = IDENT; COLON { SLabel ident }
-  | ident = IDENT;
-    operands = separated_list(COMMA, operand)
-    { SInstruction (translate_instruction ident operands) }
+  | s = statement_desc {
+      {
+        loc_val = s;
+        loc_start = $startpos;
+        loc_end = $endpos
+      }
+    }
+
+statement_desc:
+  | l = IDENT; COLON { SLabel l }
+  | opname = IDENT;
+    operands = separated_list(COMMA, operand) {
+      SInstruction (opname, operands)
+    }
 
 operand:
-  | ident = IDENT { OLabelRef ident }
-  | ident = REGNAME { ORegister ident }
-  | ident = FREGNAME { OFRegister ident }
+  | l = IDENT { OLabelRef l }
+  | r = REGNAME { ORegister r }
+  | fr = FREGNAME { OFRegister fr }
   | num = NUMBER { OImmediate num }
-  | num = NUMBER;
+  | offset = NUMBER;
     LPAREN;
-    ident = REGNAME;
-    RPAREN { ODisplacement (num, ident) }
+    base = REGNAME;
+    RPAREN { ODisplacement (offset, base) }

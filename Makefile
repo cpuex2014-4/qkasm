@@ -1,4 +1,5 @@
 SOURCES = \
+	loc.ml \
 	disasm.ml \
 	statement.mli statement.ml parser.mly lexer.mll main.ml
 RESULT = qkasm

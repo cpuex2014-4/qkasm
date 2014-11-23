@@ -2,27 +2,27 @@ open Big_int
 
 exception Assembly_error of string
 
-type gpr = int
-type fpr = int
-
 type operand =
   | OLabelRef of string
-  | ORegister of gpr
-  | OFRegister of fpr
+  | ORegister of int
+  | OFRegister of int
   | OImmediate of big_int
-  | ODisplacement of big_int * gpr
+  | ODisplacement of big_int * int
 
-type instruction
-
-type statement =
+type statement_desc =
   | SLabel of string
-  | SInstruction of instruction
+  | SInstruction of string * operand list
 
-val translate_instruction : string -> operand list -> instruction
+type statement = statement_desc Loc.loc
 
-val calculate_instruction_length :
-  (string, int) Hashtbl.t -> int -> instruction -> bool
-val instruction_length : instruction -> int
+type preinstruction =
+  | PILabel of string
+  | PIConst of int array
+  | PIJump of int * string
+  | PIBranch of int array * string
+  | PILoadAddress of int * string
 
-val emit_instruction :
-  (string, int) Hashtbl.t -> int -> instruction -> int array list
+val generate_instruction :
+  (string,int) Hashtbl.t -> int -> preinstruction -> int array list
+
+val translate_all : ('a -> statement option) -> 'a -> preinstruction list
