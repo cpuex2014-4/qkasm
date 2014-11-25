@@ -200,7 +200,8 @@ let translate opname operands =
   (* Floating-Point Instructions *)
   | "mfc1", [ORegister rt; OFRegister fs] ->
       [gen_rtype 0b010001 0b00000 rt fs 0b00000 0b000000]
-  | "mtc1", [ORegister rt; OFRegister fs] ->
+  | "mtc1", [ORegister rt; OFRegister fs]
+  | "mtc1", [OFRegister fs; ORegister rt] ->
       [gen_rtype 0b010001 0b00100 rt fs 0b00000 0b000000]
   | "bc1f", [OLabelRef l] ->
       [gen_btype 0b010001 0b01000 0b00000 l]
