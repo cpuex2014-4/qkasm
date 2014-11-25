@@ -6,15 +6,19 @@ mandelbrot:
 	jal	send_byte
 	li	$a0, 0x20 # ' '
 	jal	send_byte
-	li	$a0, 0x39 # '9'
+	li	$a0, 0x37 # '7'
 	jal	send_byte
 	li	$a0, 0x36 # '6'
+	jal	send_byte
+	li	$a0, 0x38 # '8'
 	jal	send_byte
 	li	$a0, 0x20 # ' '
 	jal	send_byte
-	li	$a0, 0x36 # '6'
+	li	$a0, 0x35 # '5'
 	jal	send_byte
-	li	$a0, 0x34 # '4'
+	li	$a0, 0x31 # '1'
+	jal	send_byte
+	li	$a0, 0x32 # '2'
 	jal	send_byte
 	li	$a0, 0x20 # ' '
 	jal	send_byte
@@ -26,7 +30,7 @@ mandelbrot:
 	jal	send_byte
 	li	$a0, 0x0A # '\n'
 	jal	send_byte
-	li	$s4, 0x3D000000 # 1.0 / 2^5
+	li	$s4, 0x3B800000 # 1.0 / 2^8
 	mtc1	$s4, $f4
 	#li	$s2, 0x40000000 # 2.0f
 	#mtc1	$s2, $f2

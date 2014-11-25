@@ -1,31 +1,33 @@
-	addiu	$fp, $zero, 16384
-	addiu	$sp, $zero, 16384
+	li	$fp, 16384
+	li	$sp, 16384
 start:
-	rrb	$t0
-	sll	$a0, $t0, 24
-	rrb	$t0
-	sll	$t0, $t0, 16
-	or	$a0, $a0, $t0
-	rrb	$t0
-	sll	$t0, $t0, 8
-	or	$a0, $a0, $t0
-	rrb	$t0
-	or	$a0, $a0, $t0
+	jal	recv_byte
+	sll	$a0, $v0, 24
+	jal	recv_byte
+	sll	$v0, $v0, 16
+	or	$a0, $a0, $v0
+	jal	recv_byte
+	sll	$v0, $v0, 8
+	or	$a0, $a0, $v0
+	jal	recv_byte
+	or	$a0, $a0, $v0
 	jal	fib
-	srl	$t0, $v0, 24
-	rsb	$t0
-	srl	$t0, $v0, 16
-	rsb	$t0
-	srl	$t0, $v0, 8
-	rsb	$t0
-	rsb	$v0
+	mov	$s0, $v0
+	srl	$a0, $s0, 24
+	jal	send_byte
+	srl	$a0, $s0, 16
+	jal	send_byte
+	srl	$a0, $s0, 8
+	jal	send_byte
+	srl	$a0, $s0, 0
+	jal	send_byte
 	j	start
 fib:
 	addiu	$sp, $sp, -12
 	sw	$ra, 8($sp)
 	sw	$a0, 4($sp)
-	addu	$t1, $a0, $zero
-	addiu	$t2, $zero, 1
+	mov	$t1, $a0
+	li	$t2, 1
 	slt	$t0, $t2, $a0
 	beq	$t0, $zero, exit
 	addiu	$a0, $a0, -1
@@ -39,5 +41,22 @@ fib:
 	lw	$ra, 8($sp)
 exit:
 	addiu	$sp, $sp, 12
-	addu	$v0, $t1, $zero
+	mov	$v0, $t1
 	jr	$ra
+recv_byte:
+	li $t0, 0xffff0000
+rd_poll:
+	lw $v0, 0($t0)
+	andi $v0, $v0, 0x01
+	beq $v0, $zero, rd_poll
+	lw $v0, 4($t0)
+	andi $v0, $v0, 0xff
+	jr $ra
+send_byte:
+	li $t0, 0xffff0000
+wr_poll:
+	lw $v0, 8($t0)
+	andi $v0, $v0, 0x01
+	beq $v0, $zero, wr_poll
+	sw $a0, 12($t0)
+	jr $ra

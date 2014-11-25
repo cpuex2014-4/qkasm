@@ -12,3 +12,7 @@
 /parser.ml
 /parser.mli
 /lexer.ml
+/examples/*
+!/examples/*.s
+!/examples/*.in
+/separator.dat

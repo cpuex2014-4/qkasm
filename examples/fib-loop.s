@@ -1,14 +1,14 @@
 start:
-	rrb	$t0
-	sll	$a0, $t0, 24
-	rrb	$t0
-	sll	$t0, $t0, 16
-	or	$a0, $a0, $t0
-	rrb	$t0
-	sll	$t0, $t0, 8
-	or	$a0, $a0, $t0
-	rrb	$t0
-	or	$a0, $a0, $t0
+	jal	recv_byte
+	sll	$a0, $v0, 24
+	jal	recv_byte
+	sll	$v0, $v0, 16
+	or	$a0, $a0, $v0
+	jal	recv_byte
+	sll	$v0, $v0, 8
+	or	$a0, $a0, $v0
+	jal	recv_byte
+	or	$a0, $a0, $v0
 fib:
 	addiu	$t0, $zero, 0
 	addiu	$t1, $zero, 1
@@ -23,12 +23,30 @@ loop:
 	addiu	$t3, $t3, 1
 	j	loop
 exit:
-	addiu	$v0, $t2, 0
-	srl	$t0, $v0, 24
-	rsb	$t0
-	srl	$t0, $v0, 16
-	rsb	$t0
-	srl	$t0, $v0, 8
-	rsb	$t0
-	rsb	$v0
+	addiu	$s0, $t2, 0
+	srl	$a0, $s0, 24
+	jal	send_byte
+	srl	$a0, $s0, 16
+	jal	send_byte
+	srl	$a0, $s0, 8
+	jal	send_byte
+	srl	$a0, $s0, 0
+	jal	send_byte
 	j	start
+recv_byte:
+	li $t0, 0xffff0000
+rd_poll:
+	lw $v0, 0($t0)
+	andi $v0, $v0, 0x01
+	beq $v0, $zero, rd_poll
+	lw $v0, 4($t0)
+	andi $v0, $v0, 0xff
+	jr $ra
+send_byte:
+	li $t0, 0xffff0000
+wr_poll:
+	lw $v0, 8($t0)
+	andi $v0, $v0, 0x01
+	beq $v0, $zero, wr_poll
+	sw $a0, 12($t0)
+	jr $ra
