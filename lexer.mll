@@ -1,5 +1,8 @@
 {
   open Big_int
+  open Lexing
+  open Loc
+  open Statement
   open Parser
 
   let big_int_of_hex_string s =
@@ -80,12 +83,27 @@ rule token = parse
   | ')'            { RPAREN }
   | ident as ident { IDENT ident }
   | "$f" (digit+ as n) { FREGNAME (int_of_string n) }
-  | regident as regident { REGNAME (Hashtbl.find regtable regident) }
+  | regident as regident {
+      try
+        REGNAME (Hashtbl.find regtable regident)
+      with Not_found ->
+        raise (Lexing_error {
+          loc_val = Printf.sprintf "Unknown regname %s" regident;
+          loc_start = lexeme_start_p lexbuf;
+          loc_end = lexeme_end_p lexbuf
+        })
+    }
   | '$' (digit+ as n) { REGNAME (int_of_string n) }
   | intstr as n    { NUMBER (big_int_of_string n) }
   | "0x" (hexdigit+ as n) { NUMBER (big_int_of_hex_string n) }
   | eof            { EOF }
-  | _              { assert false }
+  | _ as ch        {
+      raise (Lexing_error {
+        loc_val = Printf.sprintf "Character '%c' cannot appear here" ch;
+        loc_start = lexeme_start_p lexbuf;
+        loc_end = lexeme_end_p lexbuf
+      })
+    }
 
 and skip_line = parse
   | '\n' { Lexing.new_line lexbuf; () }

@@ -1,6 +1,9 @@
 open Big_int
+open Loc
 
 exception Assembly_error of string
+exception Lexing_error of string loc
+exception Parsing_error of string loc
 
 type operand =
   | OLabelRef of string

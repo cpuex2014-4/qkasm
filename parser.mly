@@ -31,6 +31,13 @@ statement:
         loc_end = $endpos
       }
     }
+  | error {
+      raise (Parsing_error {
+        loc_val = "parse error";
+        loc_start = $startpos;
+        loc_end = $endpos
+      })
+    }
 
 statement_desc:
   | l = IDENT; COLON { SLabel l }
@@ -48,3 +55,10 @@ operand:
     LPAREN;
     base = REGNAME;
     RPAREN { ODisplacement (offset, base) }
+  | error {
+      raise (Parsing_error {
+        loc_val = "parse error";
+        loc_start = $startpos;
+        loc_end = $endpos
+      })
+    }

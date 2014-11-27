@@ -1,3 +1,4 @@
+open Loc
 open Statement
 
 let use_disasm = ref false
@@ -36,4 +37,3 @@ let _ =
         pc := !pc + 4
       ) a
     ) preinstructions
-

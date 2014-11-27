@@ -2,6 +2,8 @@ open Big_int
 open Loc
 
 exception Assembly_error of string
+exception Lexing_error of string loc
+exception Parsing_error of string loc
 
 type operand =
   | OLabelRef of string
@@ -40,7 +42,8 @@ let generate_instruction lbl_tbl pc pi =
   | PIJump (opcode, jlabel) ->
       begin try
         let jtarget = Hashtbl.find lbl_tbl jlabel in
-        (* TODO: more assertion *)
+        assert (jtarget land 3 = 0);
+        assert (jtarget lsr 28 = pc lsr 28);
         [[|
           ((opcode lsl 2) lor (jtarget lsr 26)) land 255;
           (jtarget lsr 18) land 255;
@@ -53,7 +56,8 @@ let generate_instruction lbl_tbl pc pi =
   | PIBranch (upper_const, blabel) ->
       begin try
         let btarget = Hashtbl.find lbl_tbl blabel - (pc+4) in
-        (* TODO: more assertion *)
+        assert (btarget land 3 = 0);
+        assert (-32768 <= btarget/4 && btarget/4 < 32768);
         [[|
           upper_const.(0);
           upper_const.(1);
@@ -255,20 +259,34 @@ let translate opname operands =
 
 let translate_all tparser token =
   let rec translate_all buf =
-    match tparser token with
-    | None -> buf
-    | Some stmt ->
-        try
-          match stmt.loc_val with
-          | SLabel l ->
-              translate_all (PILabel l :: buf)
-          | SInstruction (opname, operands) ->
-              translate_all (List.rev_append (translate opname operands) buf)
-        with Assembly_error e ->
-          failwith (
-            Printf.sprintf "line %d : %s"
-              stmt.loc_start.Lexing.pos_lnum
-              e
-          )
+    try
+      match tparser token with
+      | None -> buf
+      | Some stmt ->
+          try
+            match stmt.loc_val with
+            | SLabel l ->
+                translate_all (PILabel l :: buf)
+            | SInstruction (opname, operands) ->
+                translate_all (List.rev_append (translate opname operands) buf)
+          with Assembly_error e ->
+            failwith (
+              Printf.sprintf "line %d : %s"
+                stmt.loc_start.Lexing.pos_lnum
+                e
+            )
+    with
+    | Lexing_error e ->
+        failwith (
+          Printf.sprintf "line %d : %s"
+            e.loc_start.Lexing.pos_lnum
+            e.loc_val
+        )
+    | Parsing_error e ->
+        failwith (
+          Printf.sprintf "line %d : %s"
+            e.loc_start.Lexing.pos_lnum
+            e.loc_val
+        )
   in
   List.rev (translate_all [])
