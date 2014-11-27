@@ -35,13 +35,18 @@ let gen_itype_pre opcode rs rt imm =
     imm land 255;
   |]
 
-let generate_instruction lbl_tbl pc pi =
+let generate_instruction lbl_tbl_g lbl_tbl_l pc pi =
   match pi with
   | PILabel l -> []
   | PIConst x -> [x]
   | PIJump (opcode, jlabel) ->
       begin try
-        let jtarget = Hashtbl.find lbl_tbl jlabel in
+        let jtarget =
+          if Hashtbl.mem lbl_tbl_l jlabel then
+            Hashtbl.find lbl_tbl_l jlabel
+          else
+            Hashtbl.find lbl_tbl_g jlabel
+        in
         assert (jtarget land 3 = 0);
         assert (jtarget lsr 28 = pc lsr 28);
         [[|
@@ -51,11 +56,18 @@ let generate_instruction lbl_tbl pc pi =
           (jtarget lsr 2) land 255;
         |]]
       with Not_found ->
-        failwith "label not found"
+        failwith
+          (Printf.sprintf "label %s not found" jlabel)
       end
   | PIBranch (upper_const, blabel) ->
       begin try
-        let btarget = Hashtbl.find lbl_tbl blabel - (pc+4) in
+        let btarget_abs =
+          if Hashtbl.mem lbl_tbl_l blabel then
+            Hashtbl.find lbl_tbl_l blabel
+          else
+            Hashtbl.find lbl_tbl_g blabel
+        in
+        let btarget = btarget_abs - (pc+4) in
         assert (btarget land 3 = 0);
         assert (-32768 <= btarget/4 && btarget/4 < 32768);
         [[|
@@ -65,16 +77,23 @@ let generate_instruction lbl_tbl pc pi =
           (btarget lsr 2) land 255;
         |]]
       with Not_found ->
-        failwith "label not found"
+        failwith
+          (Printf.sprintf "label %s not found" blabel)
       end
   | PILoadAddress (rt, lalabel) ->
       begin try
-        let latarget = Hashtbl.find lbl_tbl lalabel in
+        let latarget =
+          if Hashtbl.mem lbl_tbl_l lalabel then
+            Hashtbl.find lbl_tbl_l lalabel
+          else
+            Hashtbl.find lbl_tbl_g lalabel
+        in
         (* TODO: more assertion *)
         [gen_itype_pre 0b001111 reg_zero rt (latarget lsr 16);
          gen_itype_pre 0b001101 rt rt latarget]
       with Not_found ->
-        failwith "label not found"
+        failwith
+          (Printf.sprintf "label %s not found" lalabel)
       end
 
 let big32 = big_int_of_int 32
@@ -271,20 +290,23 @@ let translate_all tparser token =
                 translate_all (List.rev_append (translate opname operands) buf)
           with Assembly_error e ->
             failwith (
-              Printf.sprintf "line %d : %s"
+              Printf.sprintf "%s line %d : %s"
+                stmt.loc_start.Lexing.pos_fname
                 stmt.loc_start.Lexing.pos_lnum
                 e
             )
     with
     | Lexing_error e ->
         failwith (
-          Printf.sprintf "line %d : %s"
+          Printf.sprintf "%s line %d : %s"
+            e.loc_start.Lexing.pos_fname
             e.loc_start.Lexing.pos_lnum
             e.loc_val
         )
     | Parsing_error e ->
         failwith (
-          Printf.sprintf "line %d : %s"
+          Printf.sprintf "%s line %d : %s"
+            e.loc_start.Lexing.pos_fname
             e.loc_start.Lexing.pos_lnum
             e.loc_val
         )

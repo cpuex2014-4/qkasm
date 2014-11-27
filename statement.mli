@@ -26,6 +26,7 @@ type preinstruction =
   | PILoadAddress of int * string
 
 val generate_instruction :
+  (string,int) Hashtbl.t ->
   (string,int) Hashtbl.t -> int -> preinstruction -> int array list
 
 val translate_all : ('a -> statement option) -> 'a -> preinstruction list
