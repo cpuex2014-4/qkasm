@@ -73,11 +73,11 @@ let generate_instruction lbl_tbl_g lbl_tbl_l pc pi =
           else
             Hashtbl.find lbl_tbl_g blabel
         in
-        let btarget = btarget_abs - (pc+4) in
+        let btarget = btarget_abs - (pc+2) in
         assert (btarget land 3 = 0);
         assert (-32768 <= btarget/4 && btarget/4 < 32768);
         [ (btarget lsr 10) land 255;
-          (btarget lsr 2) land 255; ]
+          (btarget lsr 2) land 255 ]
       with Not_found ->
         failwith
           (Printf.sprintf "label %s not found" blabel)
