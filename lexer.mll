@@ -64,7 +64,7 @@
 let digit = ['0'-'9']
 let hexdigit = ['0'-'9' 'a'-'z' 'A'-'Z']
 let space = ' ' | '\t' | '\r'
-let alpha = ['a'-'z' 'A'-'Z' '_']
+let alpha = ['a'-'z' 'A'-'Z' '_' '.']
 let alnum = alpha | digit | '.'
 let intstr = digit+ | ['+' '-'] digit+
 let ident = alpha alnum*

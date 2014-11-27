@@ -33,24 +33,32 @@ let _ =
       lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = fname };
       let preinstructions = translate_all lexbuf in
       let lbl_tbl_l = Hashtbl.create 9876 in
+      let exports = ref [] in
       List.iter (function
+        | PIAlign a -> while !pc mod a != 0 do pc := !pc + 1 done
+        | PIExport l -> exports := l :: !exports
         | PILabel l -> Hashtbl.add lbl_tbl_l l !pc
-        | PIConst _ | PIJump  _ | PIBranch _ -> pc := !pc + 4
+        | PIConst _ -> pc := !pc + 1
+        | PIJump _ -> pc := !pc + 4
+        | PIBranchLower _ -> pc := !pc + 2
         | PILoadAddress _ -> pc := !pc + 8
+        | PIConstLabelRef _ -> pc := !pc + 4
       ) preinstructions;
+      List.iter (fun ex ->
+        try
+          Hashtbl.add lbl_tbl_g ex (Hashtbl.find lbl_tbl_l ex)
+        with Not_found ->
+          failwith (Printf.sprintf "label %s not found" ex)
+      ) !exports;
       (preinstructions, lbl_tbl_l)
     ) channels in
     pc := 0;
     List.iter (fun (preinstructions, lbl_tbl_l) ->
       List.iter (fun pi ->
         let a = generate_instruction lbl_tbl_g lbl_tbl_l !pc pi in
-        List.iter (fun inst ->
-          Printf.printf "%c%c%c%c"
-            (char_of_int inst.(0))
-            (char_of_int inst.(1))
-            (char_of_int inst.(2))
-            (char_of_int inst.(3));
-          pc := !pc + 4
+        List.iter (fun ch ->
+          Printf.printf "%c" (char_of_int ch);
+          pc := !pc + 1
         ) a
       ) preinstructions
     ) pls

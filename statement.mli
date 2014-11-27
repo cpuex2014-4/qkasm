@@ -16,17 +16,20 @@ type statement_desc =
   | SLabel of string
   | SInstruction of string * operand list
 
-type statement = statement_desc Loc.loc
+type statement = statement_desc loc
 
 type preinstruction =
+  | PIAlign of int
+  | PIExport of string
   | PILabel of string
-  | PIConst of int array
+  | PIConst of int
   | PIJump of int * string
-  | PIBranch of int array * string
+  | PIBranchLower of string
   | PILoadAddress of int * string
+  | PIConstLabelRef of string
 
 val generate_instruction :
   (string,int) Hashtbl.t ->
-  (string,int) Hashtbl.t -> int -> preinstruction -> int array list
+  (string,int) Hashtbl.t -> int -> preinstruction -> int list
 
 val translate_all : ('a -> statement option) -> 'a -> preinstruction list
