@@ -29,6 +29,7 @@ type preinstruction =
   | PIConstLabelRef of string
 
 let reg_zero = 0
+let reg_at = 1
 
 let gen_itype_pre opcode rs rt imm =
   [ ((opcode lsl 2) lor (rs lsr 3)) land 255;
@@ -275,6 +276,18 @@ let translate opname operands =
   | "mov", [ORegister rd; ORegister rs]
   | "move", [ORegister rd; ORegister rs] ->
       gen_rtype 0b000000 rs reg_zero rd 0 0b100001
+  | "blt", [ORegister rs; ORegister rt; OLabelRef l] ->
+      gen_rtype 0b000000 rs rt reg_at 0 0b101010 @
+      gen_btype 0b000101 reg_at reg_zero l
+  | "bgt", [ORegister rs; ORegister rt; OLabelRef l] ->
+      gen_rtype 0b000000 rt rs reg_at 0 0b101010 @
+      gen_btype 0b000101 reg_at reg_zero l
+  | "ble", [ORegister rs; ORegister rt; OLabelRef l] ->
+      gen_rtype 0b000000 rt rs reg_at 0 0b101010 @
+      gen_btype 0b000100 reg_at reg_zero l
+  | "bge", [ORegister rs; ORegister rt; OLabelRef l] ->
+      gen_rtype 0b000000 rs rt reg_at 0 0b101010 @
+      gen_btype 0b000100 reg_at reg_zero l
   | "li", [ORegister rt; OImmediate imm32] ->
       if s16_is_bounded imm32 then
         gen_itype 0b001001 reg_zero rt (int_of_big_int imm32)
