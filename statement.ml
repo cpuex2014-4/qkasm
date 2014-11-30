@@ -30,6 +30,7 @@ type preinstruction =
 
 let reg_zero = 0
 let reg_at = 1
+let reg_ra = 31
 
 let gen_itype_pre opcode rs rt imm =
   [ ((opcode lsl 2) lor (rs lsr 3)) land 255;
@@ -183,7 +184,9 @@ let translate opname operands =
   | "jr", [ORegister rs] ->
       gen_rtype 0b000000 rs reg_zero reg_zero 0 0b001000
   | "jalr", [ORegister rs] ->
-      gen_rtype 0b000000 rs reg_zero reg_zero 0 0b001001
+      gen_rtype 0b000000 rs reg_zero reg_ra 0 0b001001
+  | "jalr", [ORegister rd; ORegister rs] ->
+      gen_rtype 0b000000 rs reg_zero rd 0 0b001001
   | "addu", [ORegister rd; ORegister rs; ORegister rt] ->
       gen_rtype 0b000000 rs rt rd 0 0b100001
   | "subu", [ORegister rd; ORegister rs; ORegister rt] ->
@@ -238,6 +241,12 @@ let translate opname operands =
   | "sw", [ORegister rt; ODisplacement (offset, base)] ->
       s16_bound_check offset;
       gen_itype 0b101011 base rt (int_of_big_int offset)
+  | "lwc1", [OFRegister ft; ODisplacement (offset, base)] ->
+      s16_bound_check offset;
+      gen_itype 0b110001 base ft (int_of_big_int offset)
+  | "swc1", [OFRegister ft; ODisplacement (offset, base)] ->
+      s16_bound_check offset;
+      gen_itype 0b111001 base ft (int_of_big_int offset)
   (* Floating-Point Instructions *)
   | "mfc1", [ORegister rt; OFRegister fs] ->
       gen_rtype 0b010001 0b00000 rt fs 0b00000 0b000000
@@ -260,12 +269,24 @@ let translate opname operands =
       gen_rtype 0b010001 0b10000 0b00000 fs fd 0b000100
   | "mov.s", [OFRegister fd; OFRegister fs] ->
       gen_rtype 0b010001 0b10000 0b00000 fs fd 0b000110
+  | "neg.s", [OFRegister fd; OFRegister fs] ->
+      gen_rtype 0b010001 0b10000 0b00000 fs fd 0b000111
+  | "c.f.s", [OFRegister fs; OFRegister ft] ->
+      gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110000
+  | "c.un.s", [OFRegister fs; OFRegister ft] ->
+      gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110001
   | "c.eq.s", [OFRegister fs; OFRegister ft] ->
       gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110010
+  | "c.ueq.s", [OFRegister fs; OFRegister ft] ->
+      gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110011
   | "c.olt.s", [OFRegister fs; OFRegister ft] ->
       gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110100
+  | "c.ult.s", [OFRegister fs; OFRegister ft] ->
+      gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110101
   | "c.ole.s", [OFRegister fs; OFRegister ft] ->
       gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110110
+  | "c.ule.s", [OFRegister fs; OFRegister ft] ->
+      gen_rtype 0b010001 0b10000 ft fs 0b00000 0b110111
   | "cvt.w.s", [OFRegister fd; OFRegister fs] ->
       gen_rtype 0b010001 0b10000 0b00000 fs fd 0b100100
   | "cvt.s.w", [OFRegister fd; OFRegister fs] ->

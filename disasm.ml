@@ -13,6 +13,12 @@ let gprnames = [|
   "$s0"; "$s1"; "$s2"; "$s3"; "$s4"; "$s5"; "$s6"; "$s7";
   "$t8"; "$t9"; "$k0"; "$k1"; "$gp"; "$sp"; "$fp"; "$ra";
 |]
+let fprnames = [|
+  "$f0"; "$f1"; "$f2"; "$f3"; "$f4"; "$f5"; "$f6"; "$f7";
+  "$f8"; "$f9"; "$f10"; "$f11"; "$f12"; "$f13"; "$f14"; "$f15";
+  "$f16"; "$f17"; "$f18"; "$f19"; "$f20"; "$f21"; "$f22"; "$f23";
+  "$f24"; "$f25"; "$f26"; "$f27"; "$f28"; "$f29"; "$f30"; "$f31";
+|]
 
 let labelname x = Printf.sprintf "L%08x" x
 let hex4_string_of_int x = Printf.sprintf "0x%04x" x
@@ -35,6 +41,10 @@ let disasm () =
     let imm =
       if uimm < 32768 then uimm else uimm-65536 in
     let long_imm = opword land ((1 lsl 26) -1) in
+    let fmt = rs in
+    let fs = rd in
+    let ft = rt in
+    let fd = sa in
     let opdata = begin try
       if opcode = 0b000000 then (
         if funct = 0b000000 && rs = 0 then (
@@ -51,8 +61,10 @@ let disasm () =
           ("srav", [gprnames.(rd); gprnames.(rt); gprnames.(rs)])
         ) else if funct = 0b001000 && rt = 0 && rd = 0 && sa = 0 then (
           ("jr", [gprnames.(rs)])
-        ) else if funct = 0b001001 && rt = 0 && rd = 0 && sa = 0 then (
+        ) else if funct = 0b001001 && rt = 0 && rd = 31 && sa = 0 then (
           ("jalr", [gprnames.(rs)])
+        ) else if funct = 0b001001 && rt = 0 && sa = 0 then (
+          ("jalr", [gprnames.(rd); gprnames.(rs)])
         ) else if funct = 0b100001 && sa = 0 then (
           ("addu", [gprnames.(rd); gprnames.(rs); gprnames.(rt)])
         ) else if funct = 0b100011 && sa = 0 then (
@@ -104,6 +116,64 @@ let disasm () =
         ("xori", [gprnames.(rt); gprnames.(rs); hex4_string_of_int uimm]);
       ) else if opcode = 0b001111 && rs = 0 then (
         ("lui", [gprnames.(rt); hex4_string_of_int uimm]);
+      ) else if opcode = 0b010001 then (
+        if fmt = 0b00000 && fd = 0 && funct = 0 then (
+          ("mfc1", [gprnames.(rt); fprnames.(fs)])
+        ) else if fmt = 0b00100 && fd = 0 && funct = 0 then (
+          ("mtc1", [gprnames.(rt); fprnames.(fs)])
+        ) else if fmt = 0b01000 && ft = 0 then (
+          let bt = pc + 4 + (imm * 4) in
+          Hashtbl.add lbl_tbl bt true;
+          ("bc1f", [labelname bt])
+        ) else if fmt = 0b01000 && ft = 1 then (
+          let bt = pc + 4 + (imm * 4) in
+          Hashtbl.add lbl_tbl bt true;
+          ("bc1t", [labelname bt])
+        ) else if fmt = 0b10000 then (
+          if funct = 0b000000 then (
+            ("add.s", [fprnames.(fd); fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b000001 then (
+            ("sub.s", [fprnames.(fd); fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b000010 then (
+            ("mul.s", [fprnames.(fd); fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b000011 then (
+            ("div.s", [fprnames.(fd); fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b000100 && ft = 0 then (
+            ("sqrt.s", [fprnames.(fd); fprnames.(fs)])
+          ) else if funct = 0b000110 && ft = 0 then (
+            ("mov.s", [fprnames.(fd); fprnames.(fs)])
+          ) else if funct = 0b000111 && ft = 0 then (
+            ("neg.s", [fprnames.(fd); fprnames.(fs)])
+          ) else if funct = 0b110000 && fd = 0 then (
+            ("c.f.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110001 && fd = 0 then (
+            ("c.un.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110010 && fd = 0 then (
+            ("c.eq.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110011 && fd = 0 then (
+            ("c.ueq.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110100 && fd = 0 then (
+            ("c.olt.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110101 && fd = 0 then (
+            ("c.ult.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110110 && fd = 0 then (
+            ("c.ole.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b110111 && fd = 0 then (
+            ("c.ule.s", [fprnames.(fs); fprnames.(ft)])
+          ) else if funct = 0b100100 && ft = 0 then (
+            ("cvt.w.s", [fprnames.(fd); fprnames.(fs)])
+          ) else (
+            raise Unknown_instruction
+          )
+        ) else if fmt = 0b10100 then (
+          if funct = 0b100000 && ft = 0 then (
+            ("cvt.s.w", [fprnames.(fd); fprnames.(fs)])
+          ) else (
+            raise Unknown_instruction
+          )
+        ) else (
+          raise Unknown_instruction
+        )
       ) else if opcode = 0b011100 && rs = 0 && imm = 0 then (
         ("rrb", [gprnames.(rt)]);
       ) else if opcode = 0b011101 && rs = 0 && imm = 0 then (
@@ -112,11 +182,15 @@ let disasm () =
         ("lw", [gprnames.(rt); string_of_disp gprnames.(rs) imm]);
       ) else if opcode = 0b101011 then (
         ("sw", [gprnames.(rt); string_of_disp gprnames.(rs) imm]);
+      ) else if opcode = 0b110001 then (
+        ("lwc1", [fprnames.(ft); string_of_disp gprnames.(rs) imm]);
+      ) else if opcode = 0b111001 then (
+        ("swc1", [fprnames.(ft); string_of_disp gprnames.(rs) imm]);
       ) else (
         raise Unknown_instruction
       )
     with Unknown_instruction ->
-      (".data", [hex8_string_of_int opword])
+      (".long", [hex8_string_of_int opword])
     end in
     Hashtbl.add insts pc opdata;
     loop1 (pc + 4)
