@@ -11,6 +11,7 @@
 $ make
 ...
 $ ./asm_examples.sh
+$ ./qkasm -disasm < examples/loopback
 ...
 ```
 
