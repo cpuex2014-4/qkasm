@@ -5,6 +5,8 @@ exception Assembly_error of string
 exception Lexing_error of string loc
 exception Parsing_error of string loc
 
+val show_line : bool ref
+
 type operand =
   | OLabelRef of string
   | ORegister of int
@@ -27,6 +29,8 @@ type preinstruction =
   | PIBranchLower of string
   | PILoadAddress of int * string
   | PIConstLabelRef of string
+  | PIPrintLocation of unit loc
+
 
 val generate_instruction :
   (string,int) Hashtbl.t ->

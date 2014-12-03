@@ -7,6 +7,7 @@ let files = ref []
 
 let arg_spec = [
   "-disasm", Arg.Set use_disasm, "Use disassembler";
+  "-show-line", Arg.Set show_line, "Show line number";
 ]
 let anon_fun s = files := !files @ [s]
 let usage_msg = "QKASM : Qnighy assembler for Kakeudon architecture"
@@ -43,6 +44,7 @@ let _ =
         | PIBranchLower _ -> pc := !pc + 2
         | PILoadAddress _ -> pc := !pc + 8
         | PIConstLabelRef _ -> pc := !pc + 4
+        | PIPrintLocation _ -> ()
       ) preinstructions;
       List.iter (fun ex ->
         try
